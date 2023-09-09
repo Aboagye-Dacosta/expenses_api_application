@@ -4,7 +4,7 @@ const http = require("http");
 const app = require("./src/app");
 const connectBB = require("./src/db/mongo");
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
 const server = http.createServer(app);
 
 const init = async () => {
