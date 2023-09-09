@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const { v4: uuidv4 } = require("uuid");
+const { getDate } = require("../utils/utils");
 
 const { generateToken } = require("../middleware/auth");
 const UserModel = require("../model/user_model");
@@ -75,9 +76,8 @@ const httpLogin = async (req, res) => {
   });
 };
 
-
 const httpRegister = async (req, res) => {
-  const requiredFields = ["email", "password", "username", "createdAt"];
+  const requiredFields = ["email", "password", "username"];
   const missingOrEmptyFields = requiredFields.filter((field) => {
     return !req.body.hasOwnProperty(field) || !req.body[field];
   });
@@ -109,7 +109,7 @@ const httpRegister = async (req, res) => {
       username: req.body.username,
       email: req.body.email,
       imgUrl: "",
-      createdAt: req.body.createdAt,
+      createdAt: getDate(),
     };
 
     let result = await UserModel.create(user);
