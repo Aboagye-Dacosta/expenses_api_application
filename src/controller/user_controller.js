@@ -94,8 +94,6 @@ const httpRegister = async (req, res) => {
       email: req.body.email,
     });
 
-    console.log("------------------got here 1 ❤️❤️❤️");
-
     if (checkWetherEmailIsTaken) {
       return res.status(400).json({
         message: "Sorry, email has already been taken",
@@ -103,18 +101,8 @@ const httpRegister = async (req, res) => {
       });
     }
 
-    console.log("------------------got here 2 ❤️❤️❤️");
-
-
-    const salt = bcrypt.genSaltSync(10);
-
-    console.log(`------------------got here 3 ❤️❤️❤️ ${req.body.password} ${salt}`);
-
-    const hash = bcrypt.hashSync(req.body.password, salt);
-
-    console.log("------------------got here 4 ❤️❤️❤️");
-
-
+    const salt = bcrypt.genSaltSync(Number.parseInt(SALT_ROUND));
+    const hash = bcrypt.hashSync(req.body.password.tosString(), salt);
 
     const user = {
       password: hash,
@@ -124,11 +112,8 @@ const httpRegister = async (req, res) => {
       createdAt: getDate(),
     };
 
-    console.log("------------------got here 5 ❤️❤️❤️");
-
-
     let result = await UserModel.create(user);
-    const id = result._id;
+    const id = result.id;
     const token = generateToken({
       email: result.email,
       id,
@@ -144,9 +129,7 @@ const httpRegister = async (req, res) => {
       status: true,
       token,
     });
-  } catch (error)
-  {
-    console.log(error);
+  } catch (error) {
     return res.status(500).json({
       message: "Internal server error",
       status: false,
