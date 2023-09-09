@@ -101,7 +101,7 @@ const httpRegister = async (req, res) => {
       });
     }
 
-    const salt = bcrypt.genSaltSync(Number.parseInt(SALT_ROUND));
+    const salt = bcrypt.genSaltSync(Number.parseInt(10));
     const hash = bcrypt.hashSync(req.body.password, salt);
 
     const user = {
