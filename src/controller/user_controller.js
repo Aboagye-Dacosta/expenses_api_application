@@ -113,7 +113,7 @@ const httpRegister = async (req, res) => {
     };
 
     let result = await UserModel.create(user);
-    const id = result.id;
+    const id = result._id;
     const token = generateToken({
       email: result.email,
       id,
