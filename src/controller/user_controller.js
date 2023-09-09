@@ -94,6 +94,8 @@ const httpRegister = async (req, res) => {
       email: req.body.email,
     });
 
+    console.log("------------------got here 1 ❤️❤️❤️");
+
     if (checkWetherEmailIsTaken) {
       return res.status(400).json({
         message: "Sorry, email has already been taken",
@@ -101,8 +103,18 @@ const httpRegister = async (req, res) => {
       });
     }
 
-    const salt = bcrypt.genSaltSync(Number.parseInt(10));
+    console.log("------------------got here 2 ❤️❤️❤️");
+
+
+    const salt = bcrypt.genSaltSync(10);
+
+    console.log("------------------got here 3 ❤️❤️❤️");
+
     const hash = bcrypt.hashSync(req.body.password, salt);
+
+    console.log("------------------got here 4 ❤️❤️❤️");
+
+
 
     const user = {
       password: hash,
@@ -111,6 +123,9 @@ const httpRegister = async (req, res) => {
       imgUrl: "",
       createdAt: getDate(),
     };
+
+    console.log("------------------got here 5 ❤️❤️❤️");
+
 
     let result = await UserModel.create(user);
     const id = result._id;
