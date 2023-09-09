@@ -108,7 +108,7 @@ const httpRegister = async (req, res) => {
 
     const salt = bcrypt.genSaltSync(10);
 
-    console.log("------------------got here 3 ❤️❤️❤️");
+    console.log(`------------------got here 3 ❤️❤️❤️ ${req.body.password} ${salt}`);
 
     const hash = bcrypt.hashSync(req.body.password, salt);
 
