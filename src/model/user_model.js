@@ -1,11 +1,19 @@
-const mongoose = require("mongoose");
+const User = require("../db/mongo_model/user_model_mongo");
 
-const UserModel = new mongoose.Schema({
-  username: { type: String },
-  email: { type: String },
-  imgUrl: { type: String },
-  password: { type: String },
-  createdAt: { type: String, default: Date() },
-});
+const readUser = async (filter) => {
+  return await User.findOne(filter);
+};
 
-module.exports = mongoose.model("Users", UserModel);
+const createUser = async (user) => {
+  return await User.create(user);
+};
+
+const updateUser = async (user, update) => {
+  return await User.findOneAndUpdate({ _id: user }, update, { new: true });
+};
+
+module.exports = {
+  createUser,
+  readUser,
+  updateUser,
+};

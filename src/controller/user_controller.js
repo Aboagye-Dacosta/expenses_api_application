@@ -1,25 +1,14 @@
 const bcrypt = require("bcrypt");
-const { v4: uuidv4 } = require("uuid");
-const { getDate } = require("../utils/utils");
 
 const { generateToken } = require("../middleware/auth");
-const UserModel = require("../model/user_model");
+const { readUser, createUser } = require("../model/user_model");
 const SALT_ROUND = process.env.SALT_ROUND || 10;
 
 const httpIsLogin = async (req, res) => {
-  try {
-    const user = await UserModel.findOne({ id: req.user.id });
-    return res.status(200).json({
-      user,
-      message: "You are authorized",
-      status: true,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Internal server error",
-      status: false,
-    });
-  }
+  return res.status(200).json({
+    message: "user is login",
+    status: true,
+  });
 };
 
 const httpLogin = async (req, res) => {
@@ -30,7 +19,7 @@ const httpLogin = async (req, res) => {
 
   if (missingOrEmptyFields.length === 0) {
     try {
-      let user = await UserModel.findOne({ email: req.body.email });
+      let user = await readUser({ email: req.body.email });
       if (!user) {
         return res.status(404).json({
           message: "Account does not exist",
@@ -38,7 +27,10 @@ const httpLogin = async (req, res) => {
         });
       }
 
-      const isValid = bcrypt.compareSync(req.body.password, user.password);
+      const isValid = bcrypt.compareSync(
+        req.body.password.toString(),
+        user.password
+      );
 
       if (!isValid) {
         return res.status(404).json({
@@ -54,8 +46,6 @@ const httpLogin = async (req, res) => {
       });
       user = user.toJSON();
       delete user.password;
-      delete user._id;
-      user["id"] = id;
       return res.status(200).json({
         message: "Login successful",
         status: true,
@@ -63,6 +53,7 @@ const httpLogin = async (req, res) => {
         user,
       });
     } catch (error) {
+      console.log(error);
       return res.status(500).json({
         message: "Internal server error",
         status: false,
@@ -76,11 +67,12 @@ const httpLogin = async (req, res) => {
   });
 };
 
+const httpLogout = async (req, res) => {}
 const httpRegister = async (req, res) => {
   const requiredFields = ["email", "password", "username"];
-  const missingOrEmptyFields = requiredFields.filter((field) => {
-    return !req.body.hasOwnProperty(field) || !req.body[field];
-  });
+  const missingOrEmptyFields = requiredFields.filter(
+    (field) => !req.body[field]
+  );
 
   if (missingOrEmptyFields.length > 0) {
     return res.status(400).json({
@@ -90,7 +82,7 @@ const httpRegister = async (req, res) => {
   }
 
   try {
-    const checkWetherEmailIsTaken = await UserModel.findOne({
+    const checkWetherEmailIsTaken = await readUser({
       email: req.body.email,
     });
 
@@ -102,27 +94,23 @@ const httpRegister = async (req, res) => {
     }
 
     const salt = bcrypt.genSaltSync(Number.parseInt(SALT_ROUND));
-    const hash = bcrypt.hashSync(req.body.password.tosString(), salt);
+    const hash = bcrypt.hashSync(req.body.password.toString(), salt);
 
     const user = {
       password: hash,
       username: req.body.username,
       email: req.body.email,
       imgUrl: "",
-      createdAt: getDate(),
     };
 
-    let result = await UserModel.create(user);
-    const id = result.id;
+    let result = await createUser(user);
     const token = generateToken({
       email: result.email,
-      id,
+      id:result._id,
     });
     result = result.toJSON();
     delete result.password;
-    delete result._id;
 
-    result["id"] = id;
     return res.status(200).json({
       user: result,
       message: "Account created successfully",
@@ -130,6 +118,7 @@ const httpRegister = async (req, res) => {
       token,
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({
       message: "Internal server error",
       status: false,
@@ -141,4 +130,5 @@ module.exports = {
   httpIsLogin,
   httpLogin,
   httpRegister,
+  httpLogout
 };

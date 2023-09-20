@@ -18,7 +18,7 @@ function verifyToken(req, res, next) {
         .json({ message: "Unauthorized: Invalid token", status: 1 });
     }
 
-    req.user = decoded;
+    req.user = decoded.sub;
     next();
   });
 }
@@ -30,7 +30,7 @@ function generateToken(user) {
   };
 
   const options = {
-    expiresIn: "1h",
+    expiresIn: "1d",
   };
 
   const token = jwt.sign(payload, SECRETE_KEY, options);

@@ -1,20 +1,23 @@
 const { verifyToken } = require("../middleware/auth");
 const {
   httpReadExpenses,
+  httpReadExpensesById,
+  httpDeleteExpenseById,
   httpSaveExpenses,
+  httpUpdateExpenseById,
+  httpReadExpenseSummary,
 } = require("../controller/expense_controller");
 
-const Router = require("express").Router;
-
-const ExpensesRouter = Router();
+const ExpensesRouter = require("express").Router();
 ExpensesRouter.use(verifyToken);
 
-ExpensesRouter.post("/save", httpSaveExpenses);
-
-ExpensesRouter.get("/:id", (req, res) => {
-  res.send("Hello");
-});
-
+ExpensesRouter.post("/", httpSaveExpenses);
 ExpensesRouter.get("/", httpReadExpenses);
+ExpensesRouter.get("/:id", httpReadExpensesById);
+
+ExpensesRouter.get("/summary", httpReadExpenseSummary);
+
+ExpensesRouter.put("/:id", httpUpdateExpenseById);
+ExpensesRouter.delete("/:id", httpDeleteExpenseById);
 
 module.exports = ExpensesRouter;
