@@ -2,6 +2,7 @@ const { verifyToken } = require("../middleware/auth");
 const {
   httpReadExpenses,
   httpReadExpensesById,
+  httpReadExpenseByCategory,
   httpDeleteExpenseById,
   httpSaveExpenses,
   httpUpdateExpenseById,
@@ -14,8 +15,10 @@ ExpensesRouter.use(verifyToken);
 ExpensesRouter.post("/", httpSaveExpenses);
 ExpensesRouter.get("/", httpReadExpenses);
 ExpensesRouter.get("/:id", httpReadExpensesById);
+ExpensesRouter.get("/category/:category", httpReadExpenseByCategory);
 
-ExpensesRouter.get("/summary", httpReadExpenseSummary);
+ExpensesRouter.get("/summary/:params", httpReadExpenseSummary);
+ExpensesRouter.get("/summary/category/:category", httpReadExpenseSummary);
 
 ExpensesRouter.put("/:id", httpUpdateExpenseById);
 ExpensesRouter.delete("/:id", httpDeleteExpenseById);

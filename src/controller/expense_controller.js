@@ -5,6 +5,7 @@ const {
   createExpense,
   readExpense,
   readExpensesByMonthAndWeeks,
+  readExpensesByCat,
   updateExpense,
 } = require("../model/expense_model");
 
@@ -47,15 +48,6 @@ const httpSaveExpenses = async (req, res) => {
   }
 };
 
-//NB: calculate the grand total expenses.
-
-// const grandTotalExpenses = () =>
-// {
-
-// }
-
-//NB: read expenses from the database applying filters
-
 const httpReadExpenses = async (req, res) => {
   let { startDate, endDate, year, month, date, weekly, today, group } =
     req.query;
@@ -63,7 +55,7 @@ const httpReadExpenses = async (req, res) => {
 
   try {
     if (today === "true") {
-      result = await readExpensesByDay(req.user, new Date(), group);
+      result = await readExpensesByDay( req.user, new Date(), group);
       return res.status(200).json({
         message: "Today",
         status: true,
@@ -74,7 +66,7 @@ const httpReadExpenses = async (req, res) => {
     if (date) {
       try {
         const dta = new Date(date);
-        const result = await readExpensesByDay(req.user, dta, group);
+        result = await readExpensesByDay(req.user, dta, group);
         return res.status(200).json({
           message: "successful",
           status: true,
@@ -91,7 +83,7 @@ const httpReadExpenses = async (req, res) => {
     if (!startDate || !endDate) {
       const date = new Date();
       year = date.getFullYear();
-      month = date.month();
+      month = date.getMonth();
       startDate = new Date(year, month, 1);
       endDate = new Date(year, month + 1, 0);
     } else {
@@ -99,19 +91,35 @@ const httpReadExpenses = async (req, res) => {
         startDate = new Date(startDate);
         endDate = new Date(endDate);
         const now = Date.now();
-        if (now - startDate > 0 || now - endDate > 0) {
+
+        console.log(startDate - now);
+        console.log(endDate - now);
+
+        if (startDate - now > 0 || endDate - now > 0) {
           return res.status(401).json({
-            message: "bad request",
+            message: "check date range",
             status: false,
           });
         }
 
-        const result = await readRangeExpenses(
-          req.user,
-          startDate,
-          endDate,
-          group
+        if (startDate - endDate > 0) {
+          return res.status(401).json({
+            message: "start date should not be before end date",
+            status: false,
+          });
+        }
+
+        endDate = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate(),
+          23,
+          59,
+          59,
+          999
         );
+
+        result = await readRangeExpenses(req.user, startDate, endDate, group);
         return res.status(200).json({
           expenses: result,
           message: "successful",
@@ -141,7 +149,7 @@ const httpReadExpenses = async (req, res) => {
     }
 
     let grandTotalExpenses;
-    result = await readExpenseByMonth(req.user, startDate, endDate, group);
+    result = await readExpenseByMonth(req.user, year, month, group);
     if (group == "true") {
       grandTotalExpenses = result.reduce(
         (prev, cur) => prev + cur.totalExpense,
@@ -161,25 +169,49 @@ const httpReadExpenses = async (req, res) => {
   }
 };
 
-const httpReadExpenseByCategory = async (req, res) => {
-  let { today, month, year, day, category } = req.query;
-  let result = [];
-  const categories = ["Bills", "Food", "Clothing", "Others", "Glossary"];
+const validateCategory = (category) => {
+  const categories = ["BILLS ", "FOOD", "CLOTHING", "OTHERS", "GLOSSARY"];
 
   if (
     !category ||
-    categories.indexOf(
-      category.toString().substr(0, 1).toUpperCase().join(category.substr(1))
-    ) === -1
+    categories.indexOf(category.toString().toUpperCase()) === -1
   ) {
     return res.status(400).json({
       message: "malformed url",
       status: false,
     });
   }
+  return category
+    .substr(0, 1)
+    .toUpperCase()
+    .concat(category.substr(1).toLowerCase());
+};
+
+const httpReadExpenseByCategory = async (req, res) => {
+  let { today, startDate, endDate, year, month, date } = req.query;
+  let { category } = req.params;
+
+  let result = [];
 
   if (today == "true") {
-    result = await readExpensesByDayAndCat(req.user, new Date(), category);
+    const date = new Date();
+    startDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      0
+    );
+    endDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+
+    result = await readExpensesByCat(req.user, startDate, endDate, category);
     return res.status(200).json({
       message: "request successful",
       status: true,
@@ -187,7 +219,87 @@ const httpReadExpenseByCategory = async (req, res) => {
     });
   }
 
-  if (!month || !year) {
+  if (month && year) {
+    const dta = new Date();
+    month = Number.parseInt(month);
+    year = Number.parseInt(year);
+
+    if (month - 1 > dta.getMonth() || year > dta.getFullYear()) {
+      console.log(dta.getMonth());
+      return res.status(401).json({
+        status: false,
+        message: "malformed url string",
+      });
+    }
+
+    startDate = new Date(year, month - 1, 1);
+    endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    console.log(startDate, endDate);
+
+    result = await readExpensesByCat(req.user, startDate, endDate, category);
+    return res.status(200).json({
+      expenses: result,
+      status: true,
+      message: "successful",
+    });
+  }
+
+  if (date) {
+    try {
+      const dta = new Date(date);
+
+      startDate = new Date(dta.getFullYear(), dta.getMonth(), dta.getDate(), 0);
+      endDate = new Date(
+        dta.getFullYear(),
+        dta.getMonth(),
+        dta.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      result = await readExpensesByCat(req.user, startDate, endDate, category);
+      return res.status(200).json({
+        expenses: result,
+        status: true,
+        message: "successful",
+      });
+    } catch (error) {
+      return res.status(401).json({
+        status: false,
+        message: "malformed url, check date format",
+      });
+    }
+  }
+
+  if (startDate && endDate) {
+    try {
+      const dta = new Date(endDate);
+      startDate = new Date(startDate);
+      endDate = new Date(
+        dta.getFullYear(),
+        dta.getMonth(),
+        dta.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      result = await readExpensesByCat(req.user, startDate, endDate, category);
+      return res.status(200).json({
+        expenses: result,
+        status: true,
+        message: "successful",
+      });
+    } catch (error) {
+      return res.status(401).json({
+        status: false,
+        message: "malformed url, check date format",
+      });
+    }
   }
 };
 
@@ -255,7 +367,14 @@ const httpDeleteExpenseById = async (req, res) => {
   }
 };
 
-const httpReadExpenseSummary = async (rea, res) => {};
+const httpReadExpenseSummary = async (rea, res) => {
+  let { today, startDate, endDate, year, month, date } = req.query;
+
+  category = req.params;
+  category = validateCategory(category);
+
+  console.log(category);
+};
 
 module.exports = {
   httpSaveExpenses,

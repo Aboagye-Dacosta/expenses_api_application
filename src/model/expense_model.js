@@ -1,5 +1,6 @@
 const { Types } = require("mongoose");
 const Expense = require("../db/mongo_model/expense_model_mongo");
+const { getRounds } = require("bcrypt");
 
 const groupFilter = {
   $group: {
@@ -25,7 +26,7 @@ const readExpensesByDay = async (user, date, group) => {
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  return await Expense.aggregate([
+  const aggregation = [
     {
       $match: {
         user: new Types.ObjectId(user),
@@ -35,33 +36,38 @@ const readExpensesByDay = async (user, date, group) => {
         },
       },
     },
-    group === "true" ? groupFilter : null,
-  ]).exec();
+  ];
+
+  if (group == "true") {
+    aggregation.push(groupFilter);
+  }
+
+  return await Expense.aggregate(aggregation).exec();
 };
 
 const readExpenseByMonth = async (user, year, month, group) => {
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  if (group === "true") {
-    return await Expense.aggregate([
-      {
-        $match: {
-          user: new Types.ObjectId(user),
-          createdAt: { $gte: startOfMonth, $lte: endOfMonth },
-        },
+  const aggregation = [
+    {
+      $match: {
+        user: new Types.ObjectId(user),
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
       },
-      groupFilter,
-      {
-        $sort: { "expenses.createdAt": 1 },
-      },
-    ]).exec();
+    },
+  ];
+
+  if (group == "true") {
+    aggregation.push(groupFilter);
   }
 
-  return await Expense.find({
-    user: user,
-    createdAt: { $gte: startOfMonth, $lte: endOfMonth },
-  });
+  return await Expense.aggregate([
+    ...aggregation,
+    {
+      $sort: { "expenses.createdAt": 1 },
+    },
+  ]).exec();
 };
 
 const createExpense = async (expense) => {
@@ -69,7 +75,7 @@ const createExpense = async (expense) => {
 };
 
 const readRangeExpenses = async (user, startDate, endDate, group) => {
-  return await Expense.aggregate([
+  const aggregation = [
     {
       $match: {
         user: new Types.ObjectId(user),
@@ -79,8 +85,13 @@ const readRangeExpenses = async (user, startDate, endDate, group) => {
         },
       },
     },
-    group === "true" ? groupFilter : null,
-  ]).exec();
+  ];
+
+  if (group === "true") {
+    aggregation.push(groupFilter);
+  }
+
+  return await Expense.aggregate(aggregation).exec();
 };
 
 const readExpensesByMonthAndWeeks = async (user, startDate, endDate, group) => {
@@ -129,7 +140,16 @@ const readExpensesByMonthAndWeeks = async (user, startDate, endDate, group) => {
   return groupedExpenses;
 };
 
-const readExpensesByDayAndCat = () => {};
+const readExpensesByCat = async (user, startDate, endDate, category) => {
+  return await Expense.find({
+    user: user,
+    category: category,
+    createdAt: {
+      $gte: startDate,
+      $lte: endDate,
+    },
+  });
+};
 
 // Function to calculate the week number within the selected month
 function getWeekNumberInMonth(date, monthStartDate) {
@@ -156,6 +176,28 @@ const updateExpense = async (user, id, data) => {
   );
 };
 
+const expensesSummary = async (user, startDate, endDate) => {
+  return await Expense.aggregate([
+    {
+      $match: {
+        user: new Types.ObjectId(user),
+        createdAt: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$category",
+        totalExpenses: {
+          $sum: "$amount",
+        },
+      },
+    },
+  ]).exec();
+};
+
 module.exports = {
   readRangeExpenses,
   readExpensesByDay,
@@ -165,4 +207,5 @@ module.exports = {
   createExpense,
   readExpense,
   updateExpense,
+  readExpensesByCat,
 };

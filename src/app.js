@@ -9,8 +9,8 @@ const app = express();
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
-app.use("api/expenses", ExpensesRouter);
-app.use("api/auth", UserRouter);
+app.use("/api/expenses", ExpensesRouter);
+app.use("/api/auth", UserRouter);
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 
